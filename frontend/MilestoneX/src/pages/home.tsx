@@ -68,10 +68,7 @@ export default function Home() {
       console.log("Response:", response.data);
 
 navigate("/dashboard", {
-  state: {
-    extractedText: response.data.extracted_text,
-    message: response.data.message,
-  },
+  state: response.data,
 });
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
