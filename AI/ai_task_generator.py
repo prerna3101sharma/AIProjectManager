@@ -1,23 +1,25 @@
 import ollama
 import re
 import json
+import random
 
-def generate_epics_tasks_json(srs_text: str):
+def generate_epics_tasks_json_with_timeline(srs_text: str):
     prompt = f"""
 You are a professional software project manager.
 
 Your task:
-Convert the following SRS document into a JSON array of Epics.
+Convert the following SRS document into a JSON array of Epics with Tasks.
 
 STRICT RULES:
 1. Output only JSON.
 2. Each epic should have:
    - "epic_name": short title
    - "description": short description
-   - "tasks": array of task names under that epic
-3. Only epics and tasks, no extra text or explanations.
-4. Keep tasks concise and actionable.
-5. Output clean, parseable JSON only.
+   - "tasks": array of tasks, where each task has:
+       * "task_name": concise and actionable
+       * "timeline_days": estimated time to complete the task (integer, feasible, in days)
+3. Keep tasks concise and actionable.
+4. Output clean, parseable JSON only.
 
 SRS:
 {srs_text}
@@ -37,15 +39,20 @@ SRS:
         try:
             epics_tasks = json.loads(json_output)
         except json.JSONDecodeError:
-            # fallback: empty
             epics_tasks = []
     else:
         epics_tasks = []
+
+    # Optional: sanity check to ensure each task has a timeline
+    for epic in epics_tasks:
+        for task in epic.get("tasks", []):
+            if "timeline_days" not in task:
+                task["timeline_days"] = random.randint(1, 5)  # fallback 1-5 days
 
     return epics_tasks
 
 
 if __name__ == "__main__":
     srs = "User can login and upload files. Admin can manage users and generate reports."
-    result = generate_epics_tasks_json(srs)
+    result = generate_epics_tasks_json_with_timeline(srs)
     print(json.dumps(result, indent=2))
