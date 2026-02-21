@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .api import upload
+from .api import upload, milestones, project
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -14,6 +14,12 @@ app.add_middleware(
 )
 
 app.include_router(upload.router, prefix="/api")
+app.include_router(
+    milestones.router,
+    prefix="/api",
+    tags=["Milestones"]
+)
+app.include_router(project.router, prefix="/api", tags=["Project"])
 
 @app.get("/")
 def index():

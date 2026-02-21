@@ -3,6 +3,29 @@ import re
 import json
 import random
 
+def safe_json_parse(raw_output: str):
+    try:
+        raw_output = raw_output.strip()
+
+        # Remove markdown wrapper
+        if raw_output.startswith("```"):
+            raw_output = re.sub(r"```json|```", "", raw_output).strip()
+
+        data = json.loads(raw_output)
+
+        if isinstance(data, list):
+            return data
+
+        if isinstance(data, dict):
+            return data.get("epics", [])
+
+        return []
+
+    except Exception as e:
+        print("\n❌ JSON parse failed in Task Generator:", e)
+        print("RAW OUTPUT:\n", raw_output)
+        return []
+    
 def generate_epics_tasks_json_with_timeline(srs_text: str):
     prompt = f"""
 You are a professional software project manager.
