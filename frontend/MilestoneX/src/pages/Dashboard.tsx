@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ChevronDown, CheckCircle, Circle, AlertCircle } from "lucide-react";
+import {
+  ChevronDown,
+  CheckCircle,
+  Circle,
+  AlertCircle,
+  Calendar,
+} from "lucide-react";
+
+interface Task {
+  task_name: string;
+  timeline_days: number;
+}
 
 interface Epic {
   epic_name: string;
   description: string;
-  tasks: string[];
+  tasks: Task[];
 }
 
 interface DashboardData {
@@ -18,259 +29,199 @@ export default function Dashboard() {
 
   const data: DashboardData = {
     message: location.state?.message || "File processed successfully",
-    epics: location.state?.epics || [],
+    epics: Array.isArray(location.state?.epics)
+      ? location.state.epics
+      : [],
   };
 
   const [expandedEpics, setExpandedEpics] = useState<Set<number>>(
     new Set([0])
   );
-  const [taskStatuses, setTaskStatuses] = useState<Record<string, "todo" | "in-progress" | "completed">>({});
+
+  const [taskStatuses, setTaskStatuses] = useState<
+    Record<string, "todo" | "in-progress" | "completed">
+  >({});
 
   const toggleEpic = (index: number) => {
-    const newExpanded = new Set(expandedEpics);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedEpics(newExpanded);
+    const updated = new Set(expandedEpics);
+    updated.has(index) ? updated.delete(index) : updated.add(index);
+    setExpandedEpics(updated);
   };
 
   const cycleTaskStatus = (taskId: string) => {
-    const currentStatus = taskStatuses[taskId] || "todo";
-    const statuses: ("todo" | "in-progress" | "completed")[] = [
-      "todo",
-      "in-progress",
-      "completed",
-    ];
-    const nextStatus =
-      statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
-    setTaskStatuses({ ...taskStatuses, [taskId]: nextStatus });
+    const current = taskStatuses[taskId] || "todo";
+    const order = ["todo", "in-progress", "completed"];
+    const next = order[(order.indexOf(current) + 1) % order.length];
+    setTaskStatuses({ ...taskStatuses, [taskId]: next as any });
   };
 
-  const getTaskStatusColor = (
-    status: "todo" | "in-progress" | "completed"
-  ) => {
-    switch (status) {
-      case "completed":
-        return "text-green-400";
-      case "in-progress":
-        return "text-blue-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  const getEpicColor = (index: number) => {
-    const colors = [
-      "from-blue-500 to-blue-600",
-      "from-purple-500 to-purple-600",
-      "from-pink-500 to-pink-600",
-      "from-cyan-500 to-cyan-600",
-      "from-orange-500 to-orange-600",
-    ];
-    return colors[index % colors.length];
+  const getStatusColor = (status: string) => {
+    if (status === "completed") return "text-green-400";
+    if (status === "in-progress") return "text-blue-400";
+    return "text-gray-400";
   };
 
   const completedTasks = Object.values(taskStatuses).filter(
     (s) => s === "completed"
   ).length;
-  const totalTasks = data.epics.reduce((sum, epic) => sum + epic.tasks.length, 0);
-  const inProgressTasks = Object.values(taskStatuses).filter(
-    (s) => s === "in-progress"
-  ).length;
+
+  const totalTasks = data.epics.reduce(
+    (sum, epic) => sum + (epic.tasks?.length || 0),
+    0
+  );
+
+  const totalDays = data.epics.reduce(
+    (sum, epic) =>
+      sum +
+      (epic.tasks || []).reduce(
+        (taskSum, task) => taskSum + (task.timeline_days || 0),
+        0
+      ),
+    0
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-10"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl opacity-10"></div>
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Header */}
+      <div className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row sm:justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              Project Dashboard
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              Manage epics and track task progress
+            </p>
+          </div>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="bg-slate-800 rounded-lg px-5 py-3 text-sm">
+              <div className="text-gray-400">Tasks</div>
+              <div className="text-xl font-bold text-cyan-400">
+                {completedTasks}/{totalTasks}
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-lg px-5 py-3 text-sm">
+              <div className="text-gray-400">Total Duration</div>
+              <div className="text-xl font-bold text-purple-400">
+                {totalDays} days
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="relative z-10">
-        {/* Header */}
-        <div className="bg-gradient-to-b from-slate-900/80 to-slate-900/20 border-b border-blue-500/20 backdrop-blur-xl sticky top-0 z-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Project Dashboard
-                </h1>
-                <p className="text-gray-400 mt-1 text-sm">
-                  Manage your project epics and tasks
-                </p>
-              </div>
-
-              <div className="flex gap-4 flex-wrap">
-                <div className="bg-slate-800/50 border border-blue-500/20 rounded-lg p-4 backdrop-blur">
-                  <div className="text-xs text-gray-400">Completed</div>
-                  <div className="text-2xl font-bold text-green-400">
-                    {completedTasks}/{totalTasks}
-                  </div>
-                </div>
-                <div className="bg-slate-800/50 border border-blue-500/20 rounded-lg p-4 backdrop-blur">
-                  <div className="text-xs text-gray-400">In Progress</div>
-                  <div className="text-2xl font-bold text-blue-400">
-                    {inProgressTasks}
-                  </div>
-                </div>
-                <div className="bg-slate-800/50 border border-blue-500/20 rounded-lg p-4 backdrop-blur">
-                  <div className="text-xs text-gray-400">Total Tasks</div>
-                  <div className="text-2xl font-bold text-purple-400">
-                    {totalTasks}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        {/* Success Message */}
+        <div className="bg-green-500/10 border border-green-500/40 text-green-300 px-4 py-3 rounded-lg text-sm">
+          {data.message}
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Success Message */}
-          <div className="mb-8 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex gap-3 animate-pulse">
-            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-            <p className="text-green-300 text-sm">{data.message}</p>
-          </div>
+        {/* Epics */}
+        {data.epics.map((epic, epicIndex) => {
+          const epicTasks = epic.tasks || [];
 
-          {/* Epics Grid */}
-          <div className="space-y-4">
-            {data.epics.map((epic, epicIndex) => {
-              const epicTasks = epic.tasks;
-              const epicCompletedTasks = epicTasks.filter(
-                (_, taskIndex) =>
-                  taskStatuses[`${epicIndex}-${taskIndex}`] === "completed"
-              ).length;
+          return (
+            <div
+              key={epicIndex}
+              className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
+            >
+              {/* Epic Header */}
+              <button
+                onClick={() => toggleEpic(epicIndex)}
+                className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-800 transition"
+              >
+                <div className="text-left">
+                  <h2 className="text-lg font-semibold">
+                    {epic.epic_name}
+                  </h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {epic.description}
+                  </p>
+                </div>
 
-              return (
-                <div
-                  key={epicIndex}
-                  className="bg-slate-800/40 border border-blue-500/20 hover:border-blue-500/40 rounded-xl overflow-hidden transition-all duration-300 group"
-                >
-                  {/* Epic Header */}
-                  <button
-                    onClick={() => toggleEpic(epicIndex)}
-                    className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-800/20 transition-colors"
-                  >
-                    <div className="flex items-center gap-4 flex-1 text-left">
-                      {/* Epic Color Indicator */}
-                      <div
-                        className={`w-1 h-8 rounded-full bg-gradient-to-b ${getEpicColor(
-                          epicIndex
-                        )}`}
-                      ></div>
+                <ChevronDown
+                  className={`w-5 h-5 transition ${
+                    expandedEpics.has(epicIndex) ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-white group-hover:text-blue-300 transition-colors">
-                          {epic.epic_name}
-                        </h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {epic.description}
-                        </p>
-                      </div>
+              {/* Tasks */}
+              {expandedEpics.has(epicIndex) && (
+                <div className="border-t border-slate-800 px-6 py-4 space-y-3">
+                  {epicTasks.map((task, taskIndex) => {
+                    const taskId = `${epicIndex}-${taskIndex}`;
+                    const status = taskStatuses[taskId] || "todo";
 
-                      {/* Progress Bar */}
-                      <div className="hidden md:flex flex-col items-end gap-2">
-                        <div className="text-xs text-gray-400">
-                          {epicCompletedTasks}/{epicTasks.length}
+                    return (
+                      <button
+                        key={taskId}
+                        onClick={() => cycleTaskStatus(taskId)}
+                        className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 flex items-start gap-4 transition"
+                      >
+                        <div
+                          className={`mt-1 ${getStatusColor(status)}`}
+                        >
+                          {status === "completed" ? (
+                            <CheckCircle size={18} />
+                          ) : status === "in-progress" ? (
+                            <AlertCircle size={18} />
+                          ) : (
+                            <Circle size={18} />
+                          )}
                         </div>
-                        <div className="w-32 h-2 bg-slate-700 rounded-full overflow-hidden">
+
+                        <div className="flex-1 text-left">
                           <div
-                            className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-500"
-                            style={{
-                              width: `${
-                                epicTasks.length > 0
-                                  ? (epicCompletedTasks / epicTasks.length) * 100
-                                  : 0
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Expand Icon */}
-                    <ChevronDown
-                      className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
-                        expandedEpics.has(epicIndex) ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {/* Epic Tasks */}
-                  {expandedEpics.has(epicIndex) && (
-                    <div className="border-t border-blue-500/10 bg-slate-900/30 px-6 py-4 space-y-3">
-                      {epicTasks.map((task, taskIndex) => {
-                        const taskId = `${epicIndex}-${taskIndex}`;
-                        const status = taskStatuses[taskId] || "todo";
-
-                        return (
-                          <button
-                            key={taskId}
-                            onClick={() => cycleTaskStatus(taskId)}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-800/30 hover:bg-slate-800/60 border border-blue-500/10 hover:border-blue-500/30 transition-all group/task"
+                            className={`text-sm font-medium ${
+                              status === "completed"
+                                ? "line-through text-gray-500"
+                                : "text-gray-200"
+                            }`}
                           >
-                            {/* Task Status Icon */}
-                            <div
-                              className={`flex-shrink-0 ${getTaskStatusColor(
-                                status
-                              )} transition-all`}
-                            >
-                              {status === "completed" ? (
-                                <CheckCircle className="w-5 h-5" />
-                              ) : status === "in-progress" ? (
-                                <AlertCircle className="w-5 h-5 animate-pulse" />
-                              ) : (
-                                <Circle className="w-5 h-5" />
-                              )}
-                            </div>
+                            {task.task_name}
+                          </div>
 
-                            {/* Task Name */}
-                            <span
-                              className={`flex-1 text-left text-sm transition-all ${
-                                status === "completed"
-                                  ? "line-through text-gray-500"
-                                  : "text-gray-300 group-hover/task:text-white"
-                              }`}
-                            >
-                              {task}
-                            </span>
+                          {/* Timeline Bottom Left */}
+                          <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
+                            <Calendar size={14} />
+                            {task.timeline_days} day
+                            {task.timeline_days > 1 ? "s" : ""}
+                          </div>
+                        </div>
 
-                            {/* Status Badge */}
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                                status === "completed"
-                                  ? "bg-green-500/20 text-green-300"
-                                  : status === "in-progress"
-                                  ? "bg-blue-500/20 text-blue-300"
-                                  : "bg-gray-500/20 text-gray-300"
-                              }`}
-                            >
-                              {status === "in-progress"
-                                ? "In Progress"
-                                : status === "completed"
-                                ? "Completed"
-                                : "To Do"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                        <div
+                          className={`text-xs px-3 py-1 rounded-full ${
+                            status === "completed"
+                              ? "bg-green-500/20 text-green-300"
+                              : status === "in-progress"
+                              ? "bg-blue-500/20 text-blue-300"
+                              : "bg-gray-500/20 text-gray-300"
+                          }`}
+                        >
+                          {status === "in-progress"
+                            ? "In Progress"
+                            : status === "completed"
+                            ? "Completed"
+                            : "To Do"}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Empty State */}
-          {data.epics.length === 0 && (
-            <div className="text-center py-12">
-              <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-400">No epics generated yet</p>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
+
+        {data.epics.length === 0 && (
+          <div className="text-center text-gray-500 py-12">
+            No epics generated yet.
+          </div>
+        )}
       </div>
     </div>
   );
