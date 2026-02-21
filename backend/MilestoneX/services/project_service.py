@@ -1,5 +1,6 @@
 from AI_Backend.ai_task_generator import generate_epics_tasks_json_with_timeline
 from AI_Backend.ai_milestone_generator import generate_milestones
+from AI_Backend.rag import generate_clean_epics_tasks
 import json
 import re
 
@@ -10,16 +11,18 @@ class ProjectService:
     def analyze_project(srs_text: str):
         # srs_text = srs_text[:6000]
         # ---------- Generate AI Output ----------
-        raw_epics = generate_epics_tasks_json_with_timeline(srs_text)
+        # raw_epics = generate_epics_tasks_json_with_timeline(srs_text)
+        epics_tasks_rag = generate_clean_epics_tasks(srs_text)
         raw_milestones = generate_milestones(srs_text)
 
-        print("\n=========== RAW EPICS ===========\n", raw_epics)
+        # print("\n=========== RAW EPICS ===========\n", raw_epics)
+        print("\n=========== EPICS TASKS RAG ===========\n", epics_tasks_rag)
         print("\n=========== RAW MILESTONES ===========\n", raw_milestones)
 
         # ---------- CLEAN EPICS ----------
         cleaned_epics = []
 
-        for epic in raw_epics or []:
+        for epic in epics_tasks_rag or []:
 
             epic_name = (
                 epic.get("epic_name")
@@ -37,13 +40,12 @@ class ProjectService:
 
             cleaned_tasks = []
 
-            for task in epic.get("tasks", []):
+            for idx, task in enumerate(epic.get("tasks", [])):
 
                 task_name = (
                     task.get("task_name")
                     or task.get("taskName")
                     or task.get("task_name0")
-                    or task.get("task0")
                     or task.get("name")
                     or ""
                 )
@@ -59,9 +61,14 @@ class ProjectService:
                 except:
                     timeline = 0
 
+                status = task.get("status") or "Backlog"
+                sequence = task.get("sequence") or idx + 1
+
                 cleaned_tasks.append({
                     "task_name": str(task_name),
-                    "timeline_days": timeline
+                    "timeline_days": timeline,
+                    "status": str(status),
+                    "sequence": int(sequence)
                 })
 
             cleaned_epics.append({
@@ -120,5 +127,6 @@ class ProjectService:
 
         return {
             "epics": cleaned_epics,
-            "milestones": cleaned_milestones
+            "milestones": cleaned_milestones,
+            # "epics_tasks_rag": epics_tasks_rag
         }
