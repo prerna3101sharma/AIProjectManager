@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import logo from "../assets/logo.svg";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -8,7 +9,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
-
+  const navigate = useNavigate();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
@@ -47,11 +48,12 @@ export default function Home() {
     setSuccess(false);
 
     const formData = new FormData();
-    formData.append("srsFile", file);
+    formData.append("file", file);
+    console.log("Uploading file:", file.name,file.size, file.type,file);
 
     try {
       const response = await axios.post(
-        "https://dummyjson.com/posts",
+        "http://127.0.0.1:8000/api/upload",
         formData,
         {
           headers: {
@@ -63,6 +65,14 @@ export default function Home() {
       console.log("Response:", response.data);
       setSuccess(true);
       setFile(null);
+      console.log("Response:", response.data);
+
+navigate("/dashboard", {
+  state: {
+    extractedText: response.data.extracted_text,
+    message: response.data.message,
+  },
+});
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
       console.error(err);
