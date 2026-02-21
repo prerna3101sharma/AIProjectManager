@@ -1,0 +1,8 @@
+bhai ek software bnwana hai jisme
+user login krke apna dashboard dekh ske
+admin login krke dashboard dekh ske
+user ye dekh ske ki konsi book vo padh rha hai 
+kitni padh li hai 
+koi new book aayi hai kya 
+book buy kr ske
+admin bhi list kr ske
