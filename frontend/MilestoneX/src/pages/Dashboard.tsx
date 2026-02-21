@@ -44,15 +44,18 @@ export default function Dashboard() {
 
   const toggleEpic = (index: number) => {
     const updated = new Set(expandedEpics);
-    updated.has(index) ? updated.delete(index) : updated.add(index);
-    setExpandedEpics(updated);
+if (updated.has(index)) {
+  updated.delete(index);
+} else {
+  updated.add(index);
+}    setExpandedEpics(updated);
   };
 
   const cycleTaskStatus = (taskId: string) => {
     const current = taskStatuses[taskId] || "todo";
-    const order = ["todo", "in-progress", "completed"];
+    const order = ["todo", "in-progress", "completed"] as const;
     const next = order[(order.indexOf(current) + 1) % order.length];
-    setTaskStatuses({ ...taskStatuses, [taskId]: next as any });
+    setTaskStatuses({ ...taskStatuses, [taskId]: next });
   };
 
   const getStatusColor = (status: string) => {
