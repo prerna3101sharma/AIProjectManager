@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Created by venv; see https://docs.python.org/3/library/venv.html
+*
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# Virtual environments
+venv/
+.env
+
+# Node
+node_modules/
+dist/
