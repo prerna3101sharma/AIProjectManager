@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from ..services.pdf_services import PDFService
-from AI_Backend.ai_task_generator import generate_epics_tasks_json
+from AI_Backend.ai_task_generator import generate_epics_tasks_json_with_timeline
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ async def upload_srs(file: UploadFile = File(...)):
             )
 
         # Step 2: Send to AI module
-        ai_response = generate_epics_tasks_json(extracted_text)
+        ai_response = generate_epics_tasks_json_with_timeline(extracted_text)
 
         # Step 3: Return structured response
         return {
