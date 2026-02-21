@@ -7,22 +7,21 @@ def safe_json_parse(raw_output: str):
     try:
         raw_output = raw_output.strip()
 
-        # Remove markdown wrapper
-        if raw_output.startswith("```"):
-            raw_output = re.sub(r"```json|```", "", raw_output).strip()
+        # Remove markdown fences
+        raw_output = re.sub(r"```json|```", "", raw_output).strip()
 
-        data = json.loads(raw_output)
+        # Extract first JSON array block
+        match = re.search(r"\[.*\]", raw_output, re.DOTALL)
+        if not match:
+            print("❌ No JSON array found")
+            return []
 
-        if isinstance(data, list):
-            return data
+        json_block = match.group()
 
-        if isinstance(data, dict):
-            return data.get("epics", [])
-
-        return []
+        return json.loads(json_block)
 
     except Exception as e:
-        print("\n❌ JSON parse failed in Task Generator:", e)
+        print("\n❌ JSON parse failed:", e)
         print("RAW OUTPUT:\n", raw_output)
         return []
     
@@ -43,6 +42,10 @@ STRICT RULES:
        * "timeline_days": estimated time to complete the task (integer, feasible, in days)
 3. Keep tasks concise and actionable.
 4. Output clean, parseable JSON only.
+STRICTLY AVOID:
+- RETURN "epic_name", "description", "task_name", "timeline_days" as literal strings in the output.
+- DO NOT return fields like "epic_name0", "description0", "task_name0", "timeline_days0" or any variations.
+- DO NOT generate unrealistic timelines (e.g., 0 days, 1000 days)
 
 SRS:
 {srs_text}
@@ -50,29 +53,17 @@ SRS:
 
     response = ollama.chat(
         model="phi3",
+        format="json",
         messages=[{"role": "user", "content": prompt}]
     )
 
-    raw_output = response["message"]["content"].strip()
+    raw_output = response["message"]["content"]
 
-    # Clean output: extract JSON array from model output in case extra text is added
-    match = re.search(r'\[.*\]', raw_output, re.DOTALL)
-    if match:
-        json_output = match.group()
-        try:
-            epics_tasks = json.loads(json_output)
-        except json.JSONDecodeError:
-            epics_tasks = []
-    else:
-        epics_tasks = []
+    print("\n===== RAW TASK MODEL OUTPUT =====\n", raw_output)
 
-    # Optional: sanity check to ensure each task has a timeline
-    for epic in epics_tasks:
-        for task in epic.get("tasks", []):
-            if "timeline_days" not in task:
-                task["timeline_days"] = random.randint(1, 5)  # fallback 1-5 days
+    epics = safe_json_parse(raw_output)
 
-    return epics_tasks
+    return epics
 
 
 if __name__ == "__main__":

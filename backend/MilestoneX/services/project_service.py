@@ -8,7 +8,7 @@ class ProjectService:
 
     @staticmethod
     def analyze_project(srs_text: str):
-
+        # srs_text = srs_text[:6000]
         # ---------- Generate AI Output ----------
         raw_epics = generate_epics_tasks_json_with_timeline(srs_text)
         raw_milestones = generate_milestones(srs_text)
@@ -83,25 +83,34 @@ class ProjectService:
                     raw_milestones = []
 
         for m in raw_milestones or []:
+            # Normalize keys to lowercase
+            normalized = {k.lower(): v for k, v in m.items()}
 
+            # Auto-detect name-like keys
             name = (
-                m.get("name")
-                or m.get("Name")
-                or ""
+                normalized.get("name")
+                or normalized.get("names")
+                or normalized.get("Name")
+                or next((v for k, v in normalized.items() if k.startswith("name")), "")
             )
 
             description = (
-                m.get("description")
-                or m.get("Description")
-                or f"Milestone for {name}"
-            )
+            normalized.get("description")
+            or normalized.get("descriptions")
+            or normalized.get("Description")
+            or next((v for k, v in normalized.items() if k.startswith("description")), "")
+            or f"Milestone for {name}"
+        )
 
-            timeline = m.get("timeline_days") or 0
+            timeline = normalized.get("timeline_days") or 0
 
             try:
                 timeline = int(timeline)
             except:
                 timeline = 0
+
+            # Prevent negative hallucinated timelines
+            timeline = max(0, timeline)
 
             cleaned_milestones.append({
                 "name": str(name),
