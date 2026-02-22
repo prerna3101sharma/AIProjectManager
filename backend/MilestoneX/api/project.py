@@ -142,19 +142,25 @@ async def allocate_project_tasks(
         tasks_payload
     )
 
-    # 🔥 UPDATE DB WITH ALLOCATION
-    if isinstance(allocation_result, list):
-        for alloc in allocation_result:
+    # Extract actual list
+    assignments = []
 
-            db_task = db.query(Task).filter(
-                Task.project_id == project_id,
-                Task.id == alloc.get("id")
-            ).first()
+    if isinstance(allocation_result, dict):
+        assignments = allocation_result.get("task_assignments", [])
+    elif isinstance(allocation_result, list):
+        assignments = allocation_result
 
-            if db_task:
-                db_task.assigned_to = alloc.get("assigned_to")
+    # Update DB
+    for alloc in assignments:
+        db_task = db.query(Task).filter(
+            Task.project_id == project_id,
+            Task.id == alloc.get("id")
+        ).first()
 
-        db.commit()
+        if db_task:
+            db_task.assigned_to = alloc.get("assigned_to")
+
+    db.commit()
 
     return {
         "project_id": project_id,
