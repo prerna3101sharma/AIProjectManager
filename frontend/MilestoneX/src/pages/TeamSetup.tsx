@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useLocation} from "react-router-dom";
+import { useLocation,useNavigate} from "react-router-dom";
 
 interface TeamMember {
   name: string;
@@ -8,10 +8,11 @@ interface TeamMember {
   skills: string[];
   availability_days: number;
 }
-
 export default function TeamSetup() {
+  const [loading, setLoading] = useState(false);
   const location = useLocation();
-   const data = location.state || {};
+  const navigate = useNavigate();
+     const data = location.state || {};
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [form, setForm] = useState({
     name: "",
@@ -55,16 +56,23 @@ export default function TeamSetup() {
 
   const submitTeam = async () => {
     try {
+      setLoading(true);   
       const response = await axios.post(
         `http://127.0.0.1:8000/api/allocate/${data.project_id}`,
         { team }
       );
 
       console.log(response.data);
+
+    navigate("/allocation", {
+      state: response.data,
+    });
       alert("Team submitted successfully!");
     } catch (err) {
       console.error(err);
       alert("Failed to submit team.");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -176,14 +184,26 @@ export default function TeamSetup() {
         </div>
 
         {/* Submit Button */}
-        {team.length > 0 && (
-          <button
-            onClick={submitTeam}
-            className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-lg font-bold transition"
-          >
-            Submit Team & Generate Allocation
-          </button>
-        )}
+     {team.length > 0 && (
+  <button
+    onClick={submitTeam}
+    disabled={loading}
+    className={`w-full py-3 rounded-lg font-bold transition flex items-center justify-center gap-2
+      ${loading
+        ? "bg-purple-400 cursor-not-allowed"
+        : "bg-purple-600 hover:bg-purple-500"}
+    `}
+  >
+    {loading ? (
+      <>
+        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        Generating Allocation...
+      </>
+    ) : (
+      "Submit Team & Generate Allocation"
+    )}
+  </button>
+)}
       </div>
     </div>
   );

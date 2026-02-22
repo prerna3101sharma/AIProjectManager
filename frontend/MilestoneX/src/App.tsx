@@ -3,6 +3,7 @@ import Home from "./pages/home";
 import Dashboard from "./pages/Dashboard";
 import Milestones from "./pages/Milestones";
 import TeamSetup from "./pages/TeamSetup";
+import Allocation from "./pages/Allocation";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/milestones" element={<Milestones />} />
         <Route path="/team-setup" element={<TeamSetup />} />
+        <Route path="/allocation" element={<Allocation />} />
       </Routes>
     </BrowserRouter>
   );
