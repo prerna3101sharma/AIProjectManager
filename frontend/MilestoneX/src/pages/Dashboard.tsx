@@ -111,6 +111,16 @@ if (updated.has(index)) {
                 {totalDays} days
               </div>
             </div>
+            <button
+  onClick={() =>
+    navigate("/team-setup", {
+      state: { epics: data.epics },
+    })
+  }
+  className="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded-lg font-semibold transition"
+>
+  Setup Team
+</button>
           </div>
         </div>
       </div>
