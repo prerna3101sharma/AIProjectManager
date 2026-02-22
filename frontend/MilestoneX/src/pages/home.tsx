@@ -66,7 +66,11 @@ export default function Home() {
       setSuccess(true);
       setFile(null);
       console.log("Response:", response.data);
-
+if(response.data.epics.length === 0){
+  setError("No epics found in the SRS. Please check your document and try again.");
+  setSuccess(false);
+  return;
+}
 navigate("/dashboard", {
   state: response.data,
 });
