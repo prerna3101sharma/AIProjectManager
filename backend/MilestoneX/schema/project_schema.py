@@ -15,6 +15,7 @@ class TaskEpic(BaseModel):
 
 
 class ProjectAnalysisResponse(BaseModel):
+    project_id: int
     epics: List[TaskEpic]
     milestones: List[Milestone]
     # epics_tasks_rag: List[dict]

@@ -11,18 +11,18 @@ class ProjectService:
     def analyze_project(srs_text: str):
         # srs_text = srs_text[:6000]
         # ---------- Generate AI Output ----------
-        # raw_epics = generate_epics_tasks_json_with_timeline(srs_text)
-        epics_tasks_rag = generate_clean_epics_tasks(srs_text)
+        raw_epics = generate_epics_tasks_json_with_timeline(srs_text)
+        # epics_tasks_rag = generate_clean_epics_tasks(srs_text)
         raw_milestones = generate_milestones(srs_text)
 
-        # print("\n=========== RAW EPICS ===========\n", raw_epics)
-        print("\n=========== EPICS TASKS RAG ===========\n", epics_tasks_rag)
+        print("\n=========== RAW EPICS ===========\n", raw_epics)
+        # print("\n=========== EPICS TASKS RAG ===========\n", epics_tasks_rag)
         print("\n=========== RAW MILESTONES ===========\n", raw_milestones)
 
         # ---------- CLEAN EPICS ----------
         cleaned_epics = []
 
-        for epic in epics_tasks_rag or []:
+        for epic in raw_epics or []:
 
             epic_name = (
                 epic.get("epic_name")
