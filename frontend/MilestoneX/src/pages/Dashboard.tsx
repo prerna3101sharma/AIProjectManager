@@ -26,6 +26,7 @@ interface Milestone {
 }
 
 interface DashboardData {
+  project_id: number;
   message: string;
   epics: Epic[];
   milestones: Milestone[];
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const data: DashboardData = {
+    project_id: location.state?.project_id || 0,
     message: location.state?.message || "File processed successfully",
     epics: Array.isArray(location.state?.epics)
       ? location.state.epics
@@ -44,7 +46,6 @@ export default function Dashboard() {
       ? location.state.milestones
       : [],
   };
-
   const [expandedEpics, setExpandedEpics] = useState<Set<number>>(
     new Set([0])
   );
@@ -146,7 +147,7 @@ export default function Dashboard() {
             <button
               onClick={() =>
                 navigate("/team-setup", {
-                  state: { epics: data.epics },
+                  state: { epics: data.epics, project_id: data.project_id },
                 })
               }
               className="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded-lg font-semibold transition"

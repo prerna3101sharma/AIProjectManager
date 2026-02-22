@@ -32,6 +32,7 @@ class TaskAllocator:
         """
 
         try:
+            print("😊ai_allocation")
             response = ollama.chat(
                 model="phi3",
                 messages=[{"role": "user", "content": prompt}],

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { useLocation} from "react-router-dom";
 
 interface TeamMember {
   name: string;
@@ -9,6 +10,8 @@ interface TeamMember {
 }
 
 export default function TeamSetup() {
+  const location = useLocation();
+   const data = location.state || {};
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [form, setForm] = useState({
     name: "",
@@ -53,7 +56,7 @@ export default function TeamSetup() {
   const submitTeam = async () => {
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/team",
+        `http://127.0.0.1:8000/api/allocate/${data.project_id}`,
         { team }
       );
 

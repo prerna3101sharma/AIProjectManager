@@ -50,7 +50,7 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
-
+    print("😊ai_generater")
     response = ollama.chat(
         model="phi3",
         format="json",

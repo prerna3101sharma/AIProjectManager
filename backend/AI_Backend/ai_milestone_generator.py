@@ -55,6 +55,7 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
+    print("😊ai_milestones")
 
     response = ollama.chat(
         model="phi3",
