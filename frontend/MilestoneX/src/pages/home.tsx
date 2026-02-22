@@ -53,7 +53,7 @@ export default function Home() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/upload",
+        "http://127.0.0.1:8000/api/analyze",
         formData,
         {
           headers: {
@@ -118,7 +118,7 @@ navigate("/dashboard", {
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Transform your SRS into actionable project plans. Upload your Software Requirements Specification and let AI generate comprehensive project structures and Kanban tasks instantly.
+            Transform your SRS into actionable project plans. Upload your Software Requirements Specification and let AI generate comprehensive project structures and allocate tasks instantly.
           </p>
 
           {/* Form */}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   CheckCircle,
@@ -19,18 +19,29 @@ interface Epic {
   tasks: Task[];
 }
 
+interface Milestone {
+  name: string;
+  description: string;
+  timeline_days: number;
+}
+
 interface DashboardData {
   message: string;
   epics: Epic[];
+  milestones: Milestone[];
 }
 
 export default function Dashboard() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const data: DashboardData = {
     message: location.state?.message || "File processed successfully",
     epics: Array.isArray(location.state?.epics)
       ? location.state.epics
+      : [],
+    milestones: Array.isArray(location.state?.milestones)
+      ? location.state.milestones
       : [],
   };
 
@@ -44,11 +55,12 @@ export default function Dashboard() {
 
   const toggleEpic = (index: number) => {
     const updated = new Set(expandedEpics);
-if (updated.has(index)) {
-  updated.delete(index);
-} else {
-  updated.add(index);
-}    setExpandedEpics(updated);
+    if (updated.has(index)) {
+      updated.delete(index);
+    } else {
+      updated.add(index);
+    }
+    setExpandedEpics(updated);
   };
 
   const cycleTaskStatus = (taskId: string) => {
@@ -63,6 +75,10 @@ if (updated.has(index)) {
     if (status === "in-progress") return "text-blue-400";
     return "text-gray-400";
   };
+
+  // --------------------------
+  // Task Summary Calculations
+  // --------------------------
 
   const completedTasks = Object.values(taskStatuses).filter(
     (s) => s === "completed"
@@ -83,6 +99,15 @@ if (updated.has(index)) {
     0
   );
 
+  // --------------------------
+  // Milestone Summary
+  // --------------------------
+
+  const totalMilestones = data.milestones.length;
+
+  const upcomingMilestone =
+    totalMilestones > 0 ? data.milestones[0] : null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
@@ -93,7 +118,7 @@ if (updated.has(index)) {
               Project Dashboard
             </h1>
             <p className="text-gray-400 text-sm mt-1">
-              Manage epics and track task progress
+              Manage epics, milestones & track progress
             </p>
           </div>
 
@@ -111,16 +136,69 @@ if (updated.has(index)) {
                 {totalDays} days
               </div>
             </div>
+
+            <div className="bg-slate-800 rounded-lg px-5 py-3 text-sm">
+              <div className="text-gray-400">Milestones</div>
+              <div className="text-xl font-bold text-yellow-400">
+                {totalMilestones}
+              </div>
+            </div>
+            <button
+              onClick={() =>
+                navigate("/team-setup", {
+                  state: { epics: data.epics },
+                })
+              }
+              className="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded-lg font-semibold transition"
+            >
+              Setup Team
+            </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         {/* Success Message */}
         <div className="bg-green-500/10 border border-green-500/40 text-green-300 px-4 py-3 rounded-lg text-sm">
           {data.message}
         </div>
+
+        {/* Milestone Overview */}
+        {totalMilestones > 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">
+                Milestone Overview
+              </h2>
+              <button
+                onClick={() =>
+                  navigate("/milestones", {
+                    state: { milestones: data.milestones },
+                  })
+                }
+                className="text-sm text-cyan-400 hover:underline"
+              >
+                View All →
+              </button>
+            </div>
+
+            {upcomingMilestone && (
+              <div className="bg-slate-800 rounded-lg p-4">
+                <div className="text-sm font-medium">
+                  {upcomingMilestone.name}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {upcomingMilestone.description}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-purple-400 mt-2">
+                  <Calendar size={14} />
+                  {upcomingMilestone.timeline_days} days timeline
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Epics */}
         {data.epics.map((epic, epicIndex) => {
@@ -146,9 +224,10 @@ if (updated.has(index)) {
                 </div>
 
                 <ChevronDown
-                  className={`w-5 h-5 transition ${
-                    expandedEpics.has(epicIndex) ? "rotate-180" : ""
-                  }`}
+                  className={`w-5 h-5 transition ${expandedEpics.has(epicIndex)
+                      ? "rotate-180"
+                      : ""
+                    }`}
                 />
               </button>
 
@@ -157,16 +236,21 @@ if (updated.has(index)) {
                 <div className="border-t border-slate-800 px-6 py-4 space-y-3">
                   {epicTasks.map((task, taskIndex) => {
                     const taskId = `${epicIndex}-${taskIndex}`;
-                    const status = taskStatuses[taskId] || "todo";
+                    const status =
+                      taskStatuses[taskId] || "todo";
 
                     return (
                       <button
                         key={taskId}
-                        onClick={() => cycleTaskStatus(taskId)}
+                        onClick={() =>
+                          cycleTaskStatus(taskId)
+                        }
                         className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 flex items-start gap-4 transition"
                       >
                         <div
-                          className={`mt-1 ${getStatusColor(status)}`}
+                          className={`mt-1 ${getStatusColor(
+                            status
+                          )}`}
                         >
                           {status === "completed" ? (
                             <CheckCircle size={18} />
@@ -179,37 +263,36 @@ if (updated.has(index)) {
 
                         <div className="flex-1 text-left">
                           <div
-                            className={`text-sm font-medium ${
-                              status === "completed"
+                            className={`text-sm font-medium ${status === "completed"
                                 ? "line-through text-gray-500"
                                 : "text-gray-200"
-                            }`}
+                              }`}
                           >
                             {task.task_name}
                           </div>
 
-                          {/* Timeline Bottom Left */}
                           <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
                             <Calendar size={14} />
                             {task.timeline_days} day
-                            {task.timeline_days > 1 ? "s" : ""}
+                            {task.timeline_days > 1
+                              ? "s"
+                              : ""}
                           </div>
                         </div>
 
                         <div
-                          className={`text-xs px-3 py-1 rounded-full ${
-                            status === "completed"
+                          className={`text-xs px-3 py-1 rounded-full ${status === "completed"
                               ? "bg-green-500/20 text-green-300"
                               : status === "in-progress"
-                              ? "bg-blue-500/20 text-blue-300"
-                              : "bg-gray-500/20 text-gray-300"
-                          }`}
+                                ? "bg-blue-500/20 text-blue-300"
+                                : "bg-gray-500/20 text-gray-300"
+                            }`}
                         >
                           {status === "in-progress"
                             ? "In Progress"
                             : status === "completed"
-                            ? "Completed"
-                            : "To Do"}
+                              ? "Completed"
+                              : "To Do"}
                         </div>
                       </button>
                     );
