@@ -1,18 +1,16 @@
-import json
-from AI_Backend.ai_allocation_generator import allocate_tasks
+from AI_Backend.ai_allocation_generator import TaskAllocator
 
 
 class AllocationService:
 
     @staticmethod
-    def allocate(tasks, team):
+    def allocate(team_payload, tasks_payload):
         """
-        Wrapper between backend and AI layer.
-        Ensures clean structured communication.
+        Bridges FastAPI backend and AI TaskAllocator.
         """
 
-        # Always send proper JSON
-        tasks_json = json.dumps(tasks)
-        team_json = json.dumps(team)
+        team_data = {"team": team_payload}
+        tasks_data = tasks_payload
 
-        return allocate_tasks(tasks_json, team_json)
+        allocator = TaskAllocator(team_data, tasks_data)
+        return allocator.allocate_tasks()

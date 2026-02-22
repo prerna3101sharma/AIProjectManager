@@ -9,7 +9,8 @@ from ..models.project import Project
 from ..models.task import Task
 from fastapi import Depends
 from ..schema.teams import AllocationRequest
-from AI_Backend.ai_allocation_generator import allocate_tasks
+from AI_Backend.ai_allocation_generator import TaskAllocator
+import json
 
 router = APIRouter()
 
@@ -39,33 +40,68 @@ async def analyze_project(
         # 2️⃣ Generate AI Output
         result = ProjectService.analyze_project(extracted_text)
 
-        # 3️⃣ Create Project in DB
-        project = Project(
-            srs_text=extracted_text
-        )
+        # 3️⃣ Create Project
+        project = Project(srs_text=extracted_text)
         db.add(project)
         db.commit()
         db.refresh(project)
 
-        # 4️⃣ Store Tasks in DB
+        # 4️⃣ Store Tasks
         for epic in result["epics"]:
+
             for task in epic["tasks"]:
+
+                task_name = task.get("task_name", "").strip()
+                timeline = task.get("timeline_days", 0)
+
+                # 🔥 Filter invalid AI tasks
+                if not task_name or int(timeline) <= 0:
+                    continue
+
                 db_task = Task(
                     project_id=project.id,
-                    epic_name=epic["epic_name"],
+                    epic_name=epic["epic_name"],   # ✅ correct field
                     description=epic["description"],
-                    task_name=task["task_name"],
-                    timeline_days=task["timeline_days"],
-                    assigned_to=None
+                    task_name=task_name,
+                    timeline_days=int(timeline),
+                    assigned_to=None,
+                    status="pending"
                 )
+
                 db.add(db_task)
 
         db.commit()
 
-        # 5️⃣ Return response + project_id
+        # 5️⃣ Fetch stored tasks
+        stored_tasks = db.query(Task).filter(
+            Task.project_id == project.id
+        ).all()
+
+        # 6️⃣ Build response matching TaskResponse schema
+        from collections import defaultdict
+
+        epic_map = defaultdict(lambda: {
+            "epic_name": "",
+            "description": "",
+            "tasks": []
+        })
+
+        for t in stored_tasks:
+            epic_map[t.epic_name]["epic_name"] = t.epic_name
+            epic_map[t.epic_name]["description"] = t.description
+
+            epic_map[t.epic_name]["tasks"].append({
+                "task_name": t.task_name,
+                "timeline_days": t.timeline_days,
+                "status": t.status
+            })
+
+        epics_response = list(epic_map.values())
+
+        # 7️⃣ Return correct structure
         return {
             "project_id": project.id,
-            "epics": result["epics"],
+            "epics": epics_response,
             "milestones": result["milestones"]
         }
 
@@ -79,14 +115,7 @@ async def allocate_project_tasks(
     payload: AllocationRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Accept team details from frontend.
-    Fetch project tasks.
-    Send tasks + team to AI.
-    Return AI response directly.
-    """
 
-    # 1️⃣ Fetch tasks from DB
     tasks = db.query(Task).filter(Task.project_id == project_id).all()
 
     if not tasks:
@@ -96,27 +125,38 @@ async def allocate_project_tasks(
             "message": "No tasks found for this project"
         }
 
-    # 2️⃣ Convert DB tasks to structured JSON
     tasks_payload = [
-        {
-            "task_name": t.task_name,
-            "timeline_days": t.timeline_days,
-            "epic_name": t.epic_name
-        }
+    {
+        "id": t.id,
+        "task_name": t.task_name,
+        "timeline_days": t.timeline_days,
+        "epic_name": t.epic_name
+    }
         for t in tasks
     ]
 
     team_payload = [member.dict() for member in payload.team]
 
-    # 3️⃣ Call AI layer
-    ai_response = AllocationService.allocate(
-        tasks_payload,
-        team_payload
+    allocation_result = AllocationService.allocate(
+        team_payload,
+        tasks_payload
     )
-    print("🎉 TASK Payload: "+str(tasks_payload))
 
-    # 4️⃣ Return AI response directly
+    # 🔥 UPDATE DB WITH ALLOCATION
+    if isinstance(allocation_result, list):
+        for alloc in allocation_result:
+
+            db_task = db.query(Task).filter(
+                Task.project_id == project_id,
+                Task.id == alloc.get("id")
+            ).first()
+
+            if db_task:
+                db_task.assigned_to = alloc.get("assigned_to")
+
+        db.commit()
+
     return {
         "project_id": project_id,
-        "allocation": ai_response
+        "allocation": allocation_result
     }

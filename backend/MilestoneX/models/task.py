@@ -15,5 +15,6 @@ class Task(Base):
     timeline_days = Column(Integer)
 
     assigned_to = Column(String, nullable=True)
+    status = Column(String, default="pending") 
 
     project = relationship("Project", back_populates="tasks")
