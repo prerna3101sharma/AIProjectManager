@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/home";
 import Dashboard from "./pages/Dashboard";
-import TeamSetup from "./pages/TeamSetup";
+import Milestones from "./pages/Milestones";
 
 function App() {
   return (
@@ -9,7 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/team-setup" element={<TeamSetup />} />
+        <Route path="/milestones" element={<Milestones />} />
       </Routes>
     </BrowserRouter>
   );
