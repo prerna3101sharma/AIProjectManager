@@ -3,96 +3,83 @@ import json
 import random
 import ollama
 
-# --- Simple RAG Implementation ---
 class SimpleRAG:
     def __init__(self, srs_text):
-        # Split SRS into chunks (sentences)
-        self.chunks = [line.strip() for line in srs_text.split('.') if line.strip()]
+        # Split by newlines or sentences, filtering out garbage
+        self.chunks = [
+            line.strip() 
+            for line in re.split(r'\n|(?<=[.!?]) +', srs_text) 
+            if len(line.strip()) > 5
+        ]
 
-    def retrieve_all(self):
-        # Return all chunks (better than top-k)
-        return self.chunks
+    def get_batched_context(self, batch_size=20):
+        """Yields chunks of the SRS to avoid overwhelming the model context."""
+        for i in range(0, len(self.chunks), batch_size):
+            yield "\n".join(self.chunks[i:i + batch_size])
 
-# --- Kanban JSON Generator using RAG + LLM ---
-def generate_kanban_tasks_rag_ollama(srs_text: str):
-    # Initialize RAG
+def generate_clean_epics_tasks(srs_text: str):
     rag = SimpleRAG(srs_text)
+    all_epics = []
 
-    # Retrieve **all chunks** for LLM
-    retrieved_text = " ".join(rag.retrieve_all())
+    # Iterate through the SRS in batches to ensure the model "reads" everything
+    for context_batch in rag.get_batched_context(batch_size=15):
+        prompt = f"""
+        You are a Project Manager. Convert the following SRS requirements into a JSON list of Epics.
+        
+        Requirements:
+        {context_batch}
 
-    # Prompt for Ollama LLM
-    prompt = f"""
-You are a professional software project manager.
+        Rule: Return ONLY a JSON array. 
+        Each object must have: "epic_name", "description", and "tasks" (a list of objects with "task_name", "timeline_days", "status", "sequence").
+        """
 
-From the following SRS, generate JSON array of epics with tasks.
+        try:
+            response = ollama.chat(
+                model="phi3:mini",
+                format="json", # Forces JSON output
+                messages=[{"role": "user", "content": prompt}],
+                options={"num_ctx": 4096, "temperature": 0.1} # Increased context window
+            )
+            
+            batch_data = json.loads(response["message"]["content"])
+            if isinstance(batch_data, list):
+                all_epics.extend(batch_data)
+            else:
+                all_epics.append(batch_data)
 
-Rules:
-1. Each epic must have fields: "epic_name", "description", "tasks"
-2. Each task must have fields: "task_name", "timeline_days", "status", "sequence"
-3. Tasks initially go into "Backlog", sequence in order
-4. Use **all SRS lines** to generate as many tasks as possible
-5. Keep timeline_days realistic (1-5 days)
-6. Output only JSON, no extra text
+        except Exception as e:
+            print(f"Error processing batch: {e}")
 
-SRS:
-{retrieved_text}
-"""
+    # Final cleanup: Merge duplicate epics if they appeared in different batches
+    return merge_epics(all_epics)
 
-    # --- Ollama call ---
-    try:
-        response = ollama.chat(
-            model="phi3:mini",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw_output = response["message"]["content"].strip()
+def merge_epics(epics_list):
+    """Merges tasks from epics with the same name."""
+    merged = {}
+    for entry in epics_list:
+        name = entry.get("epic_name", "General")
+        if name not in merged:
+            merged[name] = {
+                "epic_name": name,
+                "description": entry.get("description", ""),
+                "tasks": []
+            }
+        
+        # Add tasks and ensure they have metadata
+        for i, task in enumerate(entry.get("tasks", [])):
+            task["timeline_days"] = task.get("timeline_days", random.randint(1, 5))
+            task["status"] = "Backlog"
+            task["sequence"] = len(merged[name]["tasks"]) + 1
+            merged[name]["tasks"].append(task)
+            
+    return list(merged.values())
 
-        # Extract JSON array
-        match = re.search(r'\[.*\]', raw_output, re.DOTALL)
-        if match:
-            json_output = match.group()
-            epics_tasks = json.loads(json_output)
-        else:
-            epics_tasks = []
-    except Exception as e:
-        print("LLM call failed, using fallback generator:", e)
-        epics_tasks = []
-
-    # --- Fallback generator if LLM fails ---
-    if not epics_tasks:
-        tasks = []
-        for i, line in enumerate(rag.chunks):
-            tasks.append({
-                "task_name": line.strip()[:120],
-                "timeline_days": random.randint(1,5),
-                "status": "Backlog",
-                "sequence": i+1
-            })
-        epics_tasks = [{
-            "epic_name": "Auto Epic from SRS",
-            "description": "Generated epic using RAG from SRS.txt",
-            "tasks": tasks
-        }]
-
-    # Ensure all tasks have required fields
-    for epic in epics_tasks:
-        for i, task in enumerate(epic.get("tasks", [])):
-            if "timeline_days" not in task:
-                task["timeline_days"] = random.randint(1,5)
-            if "status" not in task:
-                task["status"] = "Backlog"
-            if "sequence" not in task:
-                task["sequence"] = i+1
-
-    return epics_tasks
-
-# --- Main ---
 if __name__ == "__main__":
-    # Read SRS from file
-    with open("srs.txt", "r", encoding="utf-8") as f:
-        srs_content = f.read()
-
-    kanban_json = generate_kanban_tasks_rag_ollama(srs_content)
-    
-    # Print JSON ready for Kanban
-    print(json.dumps(kanban_json, indent=2))
+    try:
+        with open("srs.txt", "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        final_json = generate_clean_epics_tasks(content)
+        print(json.dumps(final_json, indent=2))
+    except FileNotFoundError:
+        print("Error: srs.txt not found.")
