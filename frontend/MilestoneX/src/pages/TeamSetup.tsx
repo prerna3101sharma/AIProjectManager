@@ -59,7 +59,7 @@ export default function TeamSetup() {
       setLoading(true);   
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/allocate/${data.project_id}`,
+        `${import.meta.env.VITE_API_URL}/api/allocate/${data.project_id}`,
         { team },
         { headers: { Authorization: `Bearer ${token}` } }
       );
