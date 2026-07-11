@@ -4,7 +4,7 @@ from .api import project as project_api
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine
-from .models import project, task, user
+from .models import project, task, user, milestone
 from .api import task as task_api
 
 project.Base.metadata.create_all(bind=engine)

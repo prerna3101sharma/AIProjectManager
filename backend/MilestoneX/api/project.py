@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.project import Project
 from ..models.task import Task
-from ..models.task import Task
+from ..models.milestone import Milestone
 from ..schema.teams import AllocationRequest
 from AI_Backend.ai_allocation_generator import TaskAllocator
 import json
@@ -83,6 +83,17 @@ async def analyze_project(
 
         db.commit()
 
+        # Store Milestones
+        for m in result.get("milestones", []):
+            db_milestone = Milestone(
+                project_id=project.id,
+                name=m.get("name", ""),
+                description=m.get("description", ""),
+                tasks=json.dumps(m.get("tasks", []))
+            )
+            db.add(db_milestone)
+        db.commit()
+
         # 5️⃣ Fetch stored tasks
         stored_tasks = db.query(Task).filter(
             Task.project_id == project.id
@@ -150,14 +161,22 @@ async def check_project(
 
     epics_response = list(epic_map.values())
 
-    # We don't have milestones stored in the DB separately in this simplified schema,
-    # so we might return empty milestones or parse them from SRS if stored.
-    # For now, just return empty milestones since we don't have a Milestones table.
+    # Fetch stored milestones
+    stored_milestones = db.query(Milestone).filter(Milestone.project_id == project.id).all()
+    milestones_response = [
+        {
+            "name": m.name,
+            "description": m.description,
+            "tasks": json.loads(m.tasks) if m.tasks else []
+        }
+        for m in stored_milestones
+    ]
+
     return {
         "exists": True,
         "project_id": project.id,
         "epics": epics_response,
-        "milestones": []
+        "milestones": milestones_response
     }
 
 @router.get("/latest")
@@ -189,11 +208,21 @@ async def get_latest_project(
 
     epics_response = list(epic_map.values())
 
+    stored_milestones = db.query(Milestone).filter(Milestone.project_id == project.id).all()
+    milestones_response = [
+        {
+            "name": m.name,
+            "description": m.description,
+            "tasks": json.loads(m.tasks) if m.tasks else []
+        }
+        for m in stored_milestones
+    ]
+
     return {
         "exists": True,
         "project_id": project.id,
         "epics": epics_response,
-        "milestones": []
+        "milestones": milestones_response
     }
 
 @router.post("/allocate/{project_id}")

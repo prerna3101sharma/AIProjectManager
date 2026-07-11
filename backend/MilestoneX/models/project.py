@@ -13,3 +13,4 @@ class Project(Base):
 
     owner = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project")
+    milestones = relationship("Milestone", back_populates="project")
