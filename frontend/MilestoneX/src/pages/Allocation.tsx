@@ -68,7 +68,7 @@ export default function Allocation() {
   const totalCompleted = Object.entries(groupedByMember).reduce(
     (sum, [memberName, tasks]) =>
       sum +
-      tasks.filter((task, index) =>
+      tasks.filter((_, index) =>
         taskStatus[`${memberName}-${index}`]
       ).length,
     0
@@ -144,7 +144,7 @@ export default function Allocation() {
               );
 
               const completedTasks = tasks.filter(
-                (task, index) =>
+                (_, index) =>
                   taskStatus[`${memberName}-${index}`]
               ).length;
 
