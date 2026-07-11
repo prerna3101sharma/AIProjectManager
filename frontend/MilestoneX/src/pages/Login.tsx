@@ -29,6 +29,23 @@ export default function Login() {
 
       const data = await response.json();
       localStorage.setItem("token", data.access_token);
+      
+      // Check if the user already has a project
+      try {
+        const projectRes = await fetch(`${import.meta.env.VITE_API_URL}/api/latest`, {
+          headers: { Authorization: `Bearer ${data.access_token}` }
+        });
+        if (projectRes.ok) {
+          const projectData = await projectRes.json();
+          if (projectData.exists) {
+            navigate("/dashboard", { state: projectData });
+            return; // Stop execution here so we don't hit navigate("/create-project")
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check for existing projects", err);
+      }
+
       navigate("/create-project");
     } catch (err: unknown) {
       if (err instanceof Error) {
