@@ -10,3 +10,4 @@ sqlalchemy
 google-generativeai
 python-dotenv
 ollama
+psycopg2-binary
