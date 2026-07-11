@@ -1,7 +1,11 @@
-import ollama
+import google.generativeai as genai
+import os
 import re
 import json
-import random
+from dotenv import load_dotenv
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def safe_json_parse(raw_output: str):
     try:
@@ -13,8 +17,8 @@ def safe_json_parse(raw_output: str):
         # Extract first JSON array block
         match = re.search(r"\[.*\]", raw_output, re.DOTALL)
         if not match:
-            print("No JSON array found")
-            return []
+            print("No JSON array found, attempting direct parse")
+            return json.loads(raw_output)
 
         json_block = match.group()
 
@@ -50,14 +54,11 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
-    print("ai_generater")
-    response = ollama.chat(
-        model="phi3",
-        format="json",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    print("ai_generater (Gemini)")
+    model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+    response = model.generate_content(prompt)
 
-    raw_output = response["message"]["content"]
+    raw_output = response.text
 
     print("\n===== RAW TASK MODEL OUTPUT =====\n", raw_output)
 
@@ -69,4 +70,4 @@ SRS:
 if __name__ == "__main__":
     srs = "User can login and upload files. Admin can manage users and generate reports."
     result = generate_epics_tasks_json_with_timeline(srs)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2))

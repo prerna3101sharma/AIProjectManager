@@ -1,6 +1,11 @@
-import ollama
+import google.generativeai as genai
+import os
 import re
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def safe_json_parse(raw_output: str):
     try:
@@ -55,15 +60,12 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
-    print("ai_milestones")
+    print("ai_milestones (Gemini)")
 
-    response = ollama.chat(
-        model="phi3",
-        format="json",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+    response = model.generate_content(prompt)
 
-    raw_output = response["message"]["content"]
+    raw_output = response.text
 
     print("\n===== RAW MILESTONE MODEL OUTPUT =====\n", raw_output)
 

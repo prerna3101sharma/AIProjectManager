@@ -1,6 +1,10 @@
 import json
-import random
-import ollama
+import os
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 class TaskAllocator:
     def __init__(self, team_data, tasks_data):
@@ -9,7 +13,7 @@ class TaskAllocator:
 
     def allocate_tasks(self):
         """
-        Uses PhiMini to allocate tasks to team members based on skills and availability.
+        Uses Gemini to allocate tasks to team members based on skills and availability.
         """
         prompt = f"""
         You are a smart project manager assistant.
@@ -23,7 +27,7 @@ class TaskAllocator:
         Strict Instructions:
         1. Assign each task to the team member whose skills best match the task.
         2. Consider availability_days so no one is overbooked.
-        3. Return ONLY JSON  with objects containing:
+        3. Return ONLY JSON array  with objects containing:
            - task_name
            - assigned_to
            - timeline_days
@@ -32,24 +36,29 @@ class TaskAllocator:
         """
 
         try:
-            print("ai_allocation")
-            response = ollama.chat(
-                model="phi3",
-                messages=[{"role": "user", "content": prompt}],
-                options={"num_ctx": 4096, "temperature": 0.1},
-                format = "json"
-            )
+            print("ai_allocation (Gemini)")
+            model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+            response = model.generate_content(prompt)
             
             # Parse the model output
             try:
-                allocated = json.loads(response["message"]["content"])
+                import re
+                raw_text = response.text.strip()
+                raw_text = re.sub(r"```json|```", "", raw_text).strip()
+                
+                match = re.search(r"\[.*\]", raw_text, re.DOTALL)
+                if match:
+                    raw_text = match.group()
+                    
+                allocated = json.loads(raw_text)
                 return allocated
-            except json.JSONDecodeError:
-                print("Warning: Model output is not valid JSON. Returning raw content.")
-                return response["message"]["content"]
+            except json.JSONDecodeError as e:
+                print(f"Warning: Model output is not valid JSON. Error: {e}")
+                print("Raw content:", response.text)
+                return []
 
         except Exception as e:
-            print(f"Error calling Ollama: {e}")
+            print(f"Error calling Gemini: {e}")
             return []
 
 # -----------------------------
