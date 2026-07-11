@@ -28,7 +28,7 @@ def safe_json_parse(raw_output: str):
         return []
 
     except Exception as e:
-        print("\n❌ JSON parse failed:", e)
+        print("\nJSON parse failed:", e)
         print("RAW OUTPUT:\n", raw_output)
         return []
     
@@ -55,7 +55,7 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
-    print("😊ai_milestones")
+    print("ai_milestones")
 
     response = ollama.chat(
         model="phi3",

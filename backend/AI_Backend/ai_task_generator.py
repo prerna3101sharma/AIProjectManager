@@ -13,7 +13,7 @@ def safe_json_parse(raw_output: str):
         # Extract first JSON array block
         match = re.search(r"\[.*\]", raw_output, re.DOTALL)
         if not match:
-            print("❌ No JSON array found")
+            print("No JSON array found")
             return []
 
         json_block = match.group()
@@ -21,7 +21,7 @@ def safe_json_parse(raw_output: str):
         return json.loads(json_block)
 
     except Exception as e:
-        print("\n❌ JSON parse failed:", e)
+        print("\nJSON parse failed:", e)
         print("RAW OUTPUT:\n", raw_output)
         return []
     
@@ -50,7 +50,7 @@ STRICTLY AVOID:
 SRS:
 {srs_text}
 """
-    print("😊ai_generater")
+    print("ai_generater")
     response = ollama.chat(
         model="phi3",
         format="json",
