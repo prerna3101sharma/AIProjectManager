@@ -19,7 +19,7 @@ export default function Home() {
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          const res = await axios.get("http://127.0.0.1:8000/api/auth/me", {
+          const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.data && res.data.email) {
@@ -27,7 +27,7 @@ export default function Home() {
             
             // Fetch latest project and redirect if exists
             try {
-              const projectRes = await axios.get("http://127.0.0.1:8000/api/latest", {
+              const projectRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/latest`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
               if (projectRes.data && projectRes.data.exists) {
@@ -95,7 +95,7 @@ export default function Home() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/analyze-project",
+        `${import.meta.env.VITE_API_URL}/api/analyze-project`,
         formData,
         {
           headers: {
