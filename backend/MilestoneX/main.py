@@ -4,7 +4,7 @@ from .api import project as project_api
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine
-from .models import project, task
+from .models import project, task, user
 from .api import task as task_api
 
 project.Base.metadata.create_all(bind=engine)
@@ -26,6 +26,9 @@ app.add_middleware(
 #     tags=["Milestones"]
 # )
 
+from .api import auth
+
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(project_api.router, prefix="/api", tags=["Project"])
 app.include_router(task_api.router, prefix="/api", tags=["Tasks"])
 @app.get("/")

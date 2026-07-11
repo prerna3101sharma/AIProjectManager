@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from ..services.pdf_services import PDFService
 from ..services.project_service import ProjectService
 from ..schema.project_schema import ProjectAnalysisResponse
@@ -7,11 +7,12 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.project import Project
 from ..models.task import Task
-from fastapi import Depends
+from ..models.task import Task
 from ..schema.teams import AllocationRequest
 from AI_Backend.ai_allocation_generator import TaskAllocator
 import json
-
+from .auth import get_current_user
+from ..models.user import User
 router = APIRouter()
 
 
@@ -20,9 +21,19 @@ router = APIRouter()
     response_model=ProjectAnalysisResponse
 )
 async def analyze_project(
+    project_name: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    # Tier enforcement: free tier users can only have 1 project
+    if current_user.tier == "free":
+        project_count = db.query(Project).filter(Project.user_id == current_user.id).count()
+        if project_count >= 1:
+            raise HTTPException(
+                status_code=403, 
+                detail="Free tier is limited to 1 project. Please upgrade to premium to create more projects."
+            )
 
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
@@ -41,7 +52,7 @@ async def analyze_project(
         result = ProjectService.analyze_project(extracted_text)
 
         # 3️⃣ Create Project
-        project = Project(srs_text=extracted_text)
+        project = Project(name=project_name, srs_text=extracted_text, user_id=current_user.id)
         db.add(project)
         db.commit()
         db.refresh(project)
@@ -107,14 +118,95 @@ async def analyze_project(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/check")
+async def check_project(
+    project_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(Project).filter(Project.name == project_name, Project.user_id == current_user.id).first()
+    if not project:
+        return {"exists": False}
+        
+    # Fetch stored tasks
+    stored_tasks = db.query(Task).filter(Task.project_id == project.id).all()
     
+    from collections import defaultdict
+    epic_map = defaultdict(lambda: {
+        "epic_name": "",
+        "description": "",
+        "tasks": []
+    })
+
+    for t in stored_tasks:
+        epic_map[t.epic_name]["epic_name"] = t.epic_name
+        epic_map[t.epic_name]["description"] = t.description
+        epic_map[t.epic_name]["tasks"].append({
+            "task_name": t.task_name,
+            "timeline_days": t.timeline_days,
+            "status": t.status
+        })
+
+    epics_response = list(epic_map.values())
+
+    # We don't have milestones stored in the DB separately in this simplified schema,
+    # so we might return empty milestones or parse them from SRS if stored.
+    # For now, just return empty milestones since we don't have a Milestones table.
+    return {
+        "exists": True,
+        "project_id": project.id,
+        "epics": epics_response,
+        "milestones": []
+    }
+
+@router.get("/latest")
+async def get_latest_project(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.id.desc()).first()
+    if not project:
+        return {"exists": False}
+        
+    stored_tasks = db.query(Task).filter(Task.project_id == project.id).all()
+    
+    from collections import defaultdict
+    epic_map = defaultdict(lambda: {
+        "epic_name": "",
+        "description": "",
+        "tasks": []
+    })
+
+    for t in stored_tasks:
+        epic_map[t.epic_name]["epic_name"] = t.epic_name
+        epic_map[t.epic_name]["description"] = t.description
+        epic_map[t.epic_name]["tasks"].append({
+            "task_name": t.task_name,
+            "timeline_days": t.timeline_days,
+            "status": t.status
+        })
+
+    epics_response = list(epic_map.values())
+
+    return {
+        "exists": True,
+        "project_id": project.id,
+        "epics": epics_response,
+        "milestones": []
+    }
 
 @router.post("/allocate/{project_id}")
 async def allocate_project_tasks(
     project_id: int,
     payload: AllocationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    # Verify ownership
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == current_user.id).first()
+    if not project:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
 
     tasks = db.query(Task).filter(Task.project_id == project_id).all()
 

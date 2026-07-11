@@ -1,18 +1,24 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from fastapi import Depends
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # -------------------------
 # Database URL
 # -------------------------
-DATABASE_URL = "sqlite:///./milestonex.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./milestonex.db")
 
 # -------------------------
 # Engine
 # -------------------------
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Required only for SQLite
+    connect_args=connect_args
 )
 
 # -------------------------

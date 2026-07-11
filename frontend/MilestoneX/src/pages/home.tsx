@@ -1,7 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import logo from "../assets/logo.svg";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -9,7 +10,40 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [username, setUsername] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const fetchUserAndProject = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const res = await axios.get("http://127.0.0.1:8000/api/auth/me", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.data && res.data.email) {
+            setUsername(res.data.email.split("@")[0]);
+            
+            // Fetch latest project and redirect if exists
+            try {
+              const projectRes = await axios.get("http://127.0.0.1:8000/api/latest", {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (projectRes.data && projectRes.data.exists) {
+                navigate("/dashboard", { state: projectRes.data });
+              }
+            } catch (projectErr) {
+              console.error("Failed to fetch latest project", projectErr);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch user", err);
+        }
+      }
+    };
+    fetchUserAndProject();
+  }, [navigate]);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
@@ -43,21 +77,30 @@ export default function Home() {
       return;
     }
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Please login or register first to generate a project plan.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(false);
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("project_name", location.state?.projectName || "My Project");
     console.log("Uploading file:", file.name,file.size, file.type,file);
 
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.post(
         "http://127.0.0.1:8000/api/analyze-project",
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${token}`
           },
         }
       );
@@ -75,9 +118,19 @@ navigate("/dashboard", {
   state: response.data,
 });
       setTimeout(() => setSuccess(false), 5000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      setError("Upload failed. Try again.");
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 403) {
+          setError(err.response.data.detail || "You have reached your project limit. Please upgrade.");
+        } else if (err.response?.status === 401) {
+          setError("Your session has expired. Please login again.");
+        } else {
+          setError("Upload failed. Try again.");
+        }
+      } else {
+        setError("Upload failed. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -104,6 +157,30 @@ navigate("/dashboard", {
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-10"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl opacity-10"></div>
       </div>
+
+      {/* Navigation */}
+      <nav className="relative z-20 flex justify-end p-6 gap-4 max-w-7xl mx-auto w-full items-center">
+        {username ? (
+          <span className="text-gray-300 font-medium">
+            Hello, <span className="text-white">{username}</span>
+          </span>
+        ) : (
+          <>
+            <Link 
+              to="/login"
+              className="px-6 py-2 rounded-lg font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Login
+            </Link>
+            <Link
+              to="/register"
+              className="px-6 py-2 rounded-lg font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-lg shadow-blue-500/30"
+            >
+              Register
+            </Link>
+          </>
+        )}
+      </nav>
 
       {/* Hero Section */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
