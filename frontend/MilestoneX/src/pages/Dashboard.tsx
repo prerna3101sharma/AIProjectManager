@@ -22,7 +22,8 @@ interface Epic {
 interface Milestone {
   name: string;
   description: string;
-  timeline_days: number;
+  timeline_days?: number;
+  tasks?: string[];
 }
 
 interface DashboardData {
@@ -109,6 +110,19 @@ export default function Dashboard() {
   const upcomingMilestone =
     totalMilestones > 0 ? data.milestones[0] : null;
 
+  const getMilestoneDays = (milestone: Milestone) => {
+    if (!milestone.tasks || !Array.isArray(milestone.tasks)) return 0;
+    let days = 0;
+    data.epics.forEach((epic) => {
+      epic.tasks?.forEach((task) => {
+        if (milestone.tasks?.includes(task.task_name)) {
+          days += task.timeline_days || 0;
+        }
+      });
+    });
+    return days;
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
@@ -175,7 +189,11 @@ export default function Dashboard() {
               <button
                 onClick={() =>
                   navigate("/milestones", {
-                    state: { milestones: data.milestones },
+                    state: { 
+                      milestones: data.milestones,
+                      epics: data.epics,
+                      taskStatuses: taskStatuses
+                    },
                   })
                 }
                 className="text-sm text-cyan-400 hover:underline"
@@ -194,7 +212,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-purple-400 mt-2">
                   <Calendar size={14} />
-                  {upcomingMilestone.timeline_days} days timeline
+                  {getMilestoneDays(upcomingMilestone)} days timeline
                 </div>
               </div>
             )}
