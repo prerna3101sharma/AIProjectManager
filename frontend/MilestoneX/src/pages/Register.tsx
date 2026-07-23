@@ -122,9 +122,16 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity mt-4 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity mt-4 disabled:opacity-50"
           >
-            {loading ? "Registering..." : "Sign Up"}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Registering...
+              </>
+            ) : (
+              "Sign Up"
+            )}
           </button>
         </form>
 

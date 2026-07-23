@@ -81,8 +81,17 @@ export default function CreateProject() {
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 disabled:opacity-50"
           >
-            {loading ? "Checking..." : "Continue to Upload SRS"}
-            {!loading && <ArrowRight size={18} />}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Checking...
+              </>
+            ) : (
+              <>
+                Continue to Upload SRS
+                <ArrowRight size={18} />
+              </>
+            )}
           </button>
         </form>
       </div>

@@ -6,11 +6,13 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
       const formData = new URLSearchParams();
@@ -53,6 +55,8 @@ export default function Login() {
       } else {
         setError("An unknown error occurred");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,9 +107,17 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity mt-4"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity mt-4 disabled:opacity-50"
           >
-            Sign In
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Signing In...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
 
