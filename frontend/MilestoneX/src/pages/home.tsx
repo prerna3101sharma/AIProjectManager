@@ -184,13 +184,21 @@ navigate("/dashboard", {
           </div>
 
           {/* Title */}
-          <h1 className="text-5xl sm:text-6xl font-bold mb-6 text-balance bg-gradient-to-r from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent">
-            AI Project Architect
-          </h1>
+          {location.state?.projectName ? (
+            <h1 className="text-5xl sm:text-6xl font-bold mb-6 text-balance bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Upload SRS for {location.state.projectName}
+            </h1>
+          ) : (
+            <h1 className="text-5xl sm:text-6xl font-bold mb-6 text-balance bg-gradient-to-r from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent">
+              AI Project Architect
+            </h1>
+          )}
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Transform your SRS into actionable project plans. Upload your Software Requirements Specification and let AI generate comprehensive project structures and allocate tasks instantly.
+            {location.state?.projectName
+              ? "Almost there! Upload your Software Requirements Specification (SRS) document to generate your project structure, tasks, and milestones instantly."
+              : "Transform your SRS into actionable project plans. Upload your Software Requirements Specification and let AI generate comprehensive project structures and allocate tasks instantly."}
           </p>
 
           {/* Form */}
