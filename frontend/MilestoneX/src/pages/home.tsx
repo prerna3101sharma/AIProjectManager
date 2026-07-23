@@ -24,18 +24,7 @@ export default function Home() {
           });
           if (res.data && res.data.email) {
             setUsername(res.data.email.split("@")[0]);
-            
-            // Fetch latest project and redirect if exists
-            try {
-              const projectRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/latest`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (projectRes.data && projectRes.data.exists) {
-                navigate("/dashboard", { state: projectRes.data });
-              }
-            } catch (projectErr) {
-              console.error("Failed to fetch latest project", projectErr);
-            }
+            navigate("/projects");
           }
         } catch (err) {
           console.error("Failed to fetch user", err);

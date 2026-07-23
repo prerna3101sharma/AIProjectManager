@@ -41,7 +41,7 @@ export default function Register() {
       if (loginResponse.ok) {
         const data = await loginResponse.json();
         localStorage.setItem("token", data.access_token);
-        navigate("/create-project");
+        navigate("/projects");
       } else {
         navigate("/login");
       }

@@ -8,6 +8,25 @@ interface TeamMember {
   skills: string[];
   availability_days: number;
 }
+const COMMON_ROLES = [
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "Mobile Developer",
+  "UI/UX Designer",
+  "DevOps Engineer",
+  "QA Engineer",
+  "Project Manager",
+  "Data Scientist",
+  "Business Analyst"
+];
+
+const COMMON_SKILLS = [
+  "React", "Node.js", "Python", "Java", "TypeScript", 
+  "AWS", "Docker", "Figma", "SQL", "MongoDB",
+  "Vue.js", "Angular", "Go", "C#", "Kubernetes"
+];
+
 export default function TeamSetup() {
   const [loading, setLoading] = useState(false);
   const location = useLocation();
@@ -18,7 +37,7 @@ export default function TeamSetup() {
     name: "",
     role: "",
     skills: "",
-    availability_days: 0,
+    availability_days: "",
   });
 
   const handleChange = (
@@ -44,7 +63,7 @@ export default function TeamSetup() {
       name: "",
       role: "",
       skills: "",
-      availability_days: 0,
+      availability_days: "",
     });
   };
 
@@ -92,53 +111,74 @@ export default function TeamSetup() {
           </h2>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={form.name}
-              onChange={handleChange}
-              className="bg-slate-800 p-3 rounded-lg border border-slate-700"
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400 ml-1">Team Member Name</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="e.g. Alice Smith"
+                value={form.name}
+                onChange={handleChange}
+                className="bg-slate-800 p-3 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
 
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="bg-slate-800 p-3 rounded-lg border border-slate-700"
-            >
-              <option value="">Select Role</option>
-              <option value="Frontend Developer">
-                Frontend Developer
-              </option>
-              <option value="Backend Developer">
-                Backend Developer
-              </option>
-              <option value="Full Stack Developer">
-                Full Stack Developer
-              </option>
-              <option value="UI/UX Designer">
-                UI/UX Designer
-              </option>
-            </select>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400 ml-1">Role</label>
+              <select
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                className="bg-slate-800 p-3 rounded-lg border border-slate-700 text-gray-200 focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Select Role</option>
+                {COMMON_ROLES.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
 
-            <input
-              type="text"
-              name="skills"
-              placeholder="Skills (comma separated)"
-              value={form.skills}
-              onChange={handleChange}
-              className="bg-slate-800 p-3 rounded-lg border border-slate-700"
-            />
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs text-gray-400 ml-1">Skills (comma separated)</label>
+              <input
+                type="text"
+                name="skills"
+                placeholder="e.g. React, Node.js, Python"
+                value={form.skills}
+                onChange={handleChange}
+                className="bg-slate-800 p-3 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {COMMON_SKILLS.map(skill => (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => {
+                      const currentSkills = form.skills ? form.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+                      if (!currentSkills.includes(skill)) {
+                        setForm({ ...form, skills: [...currentSkills, skill].join(", ") });
+                      }
+                    }}
+                    className="text-xs bg-slate-800 hover:bg-cyan-900 border border-slate-700 text-cyan-300 px-3 py-1.5 rounded-full transition"
+                  >
+                    + {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            <input
-              type="number"
-              name="availability_days"
-              placeholder="Availability (days)"
-              value={form.availability_days}
-              onChange={handleChange}
-              className="bg-slate-800 p-3 rounded-lg border border-slate-700"
-            />
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs text-gray-400 ml-1">Availability</label>
+              <input
+                type="number"
+                name="availability_days"
+                placeholder="Availability in days (e.g. 5)"
+                value={form.availability_days}
+                onChange={handleChange}
+                min="1"
+                className="bg-slate-800 p-3 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
           </div>
 
           <button

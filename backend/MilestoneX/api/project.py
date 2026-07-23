@@ -8,6 +8,7 @@ from ..database import get_db
 from ..models.project import Project
 from ..models.task import Task
 from ..models.milestone import Milestone
+from ..models.team_member import TeamMember
 from ..schema.teams import AllocationRequest
 from AI_Backend.ai_allocation_generator import TaskAllocator
 import json
@@ -154,9 +155,11 @@ async def check_project(
         epic_map[t.epic_name]["epic_name"] = t.epic_name
         epic_map[t.epic_name]["description"] = t.description
         epic_map[t.epic_name]["tasks"].append({
+            "id": t.id,
             "task_name": t.task_name,
             "timeline_days": t.timeline_days,
-            "status": t.status
+            "status": t.status,
+            "assigned_to": t.assigned_to
         })
 
     epics_response = list(epic_map.values())
@@ -172,11 +175,24 @@ async def check_project(
         for m in stored_milestones
     ]
 
+    # Fetch stored team
+    stored_team = db.query(TeamMember).filter(TeamMember.project_id == project.id).all()
+    team_response = [
+        {
+            "name": m.name,
+            "role": m.role,
+            "skills": json.loads(m.skills) if m.skills and m.skills.startswith("[") else [s.strip() for s in (m.skills or "").split(",") if s.strip()],
+            "availability_days": m.availability_days
+        }
+        for m in stored_team
+    ]
+
     return {
         "exists": True,
         "project_id": project.id,
         "epics": epics_response,
-        "milestones": milestones_response
+        "milestones": milestones_response,
+        "team": team_response
     }
 
 @router.get("/latest")
@@ -201,9 +217,11 @@ async def get_latest_project(
         epic_map[t.epic_name]["epic_name"] = t.epic_name
         epic_map[t.epic_name]["description"] = t.description
         epic_map[t.epic_name]["tasks"].append({
+            "id": t.id,
             "task_name": t.task_name,
             "timeline_days": t.timeline_days,
-            "status": t.status
+            "status": t.status,
+            "assigned_to": t.assigned_to
         })
 
     epics_response = list(epic_map.values())
@@ -218,11 +236,23 @@ async def get_latest_project(
         for m in stored_milestones
     ]
 
+    stored_team = db.query(TeamMember).filter(TeamMember.project_id == project.id).all()
+    team_response = [
+        {
+            "name": m.name,
+            "role": m.role,
+            "skills": json.loads(m.skills) if m.skills and m.skills.startswith("[") else [s.strip() for s in (m.skills or "").split(",") if s.strip()],
+            "availability_days": m.availability_days
+        }
+        for m in stored_team
+    ]
+
     return {
         "exists": True,
         "project_id": project.id,
         "epics": epics_response,
-        "milestones": milestones_response
+        "milestones": milestones_response,
+        "team": team_response
     }
 
 @router.post("/allocate/{project_id}")
@@ -236,6 +266,19 @@ async def allocate_project_tasks(
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == current_user.id).first()
     if not project:
         raise HTTPException(status_code=403, detail="Not authorized to access this project")
+
+    # Store team members in DB
+    db.query(TeamMember).filter(TeamMember.project_id == project_id).delete()
+    for member in payload.team:
+        db_member = TeamMember(
+            project_id=project_id,
+            name=member.name,
+            role=member.role,
+            skills=json.dumps(member.skills),
+            availability_days=member.availability_days
+        )
+        db.add(db_member)
+    db.commit()
 
     tasks = db.query(Task).filter(Task.project_id == project_id).all()
 
@@ -286,4 +329,73 @@ async def allocate_project_tasks(
     return {
         "project_id": project_id,
         "allocation": allocation_result
+    }
+
+@router.get("/all")
+async def get_all_projects(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    projects = db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.id.desc()).all()
+    return [{"id": p.id, "name": p.name} for p in projects]
+
+@router.get("/{project_id}")
+async def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == current_user.id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    stored_tasks = db.query(Task).filter(Task.project_id == project.id).all()
+    
+    from collections import defaultdict
+    epic_map = defaultdict(lambda: {
+        "epic_name": "",
+        "description": "",
+        "tasks": []
+    })
+
+    for t in stored_tasks:
+        epic_map[t.epic_name]["epic_name"] = t.epic_name
+        epic_map[t.epic_name]["description"] = t.description
+        epic_map[t.epic_name]["tasks"].append({
+            "id": t.id,
+            "task_name": t.task_name,
+            "timeline_days": t.timeline_days,
+            "status": t.status,
+            "assigned_to": t.assigned_to
+        })
+
+    epics_response = list(epic_map.values())
+
+    stored_milestones = db.query(Milestone).filter(Milestone.project_id == project.id).all()
+    milestones_response = [
+        {
+            "name": m.name,
+            "description": m.description,
+            "tasks": json.loads(m.tasks) if m.tasks else []
+        }
+        for m in stored_milestones
+    ]
+
+    stored_team = db.query(TeamMember).filter(TeamMember.project_id == project.id).all()
+    team_response = [
+        {
+            "name": m.name,
+            "role": m.role,
+            "skills": json.loads(m.skills) if m.skills and m.skills.startswith("[") else [s.strip() for s in (m.skills or "").split(",") if s.strip()],
+            "availability_days": m.availability_days
+        }
+        for m in stored_team
+    ]
+
+    return {
+        "exists": True,
+        "project_id": project.id,
+        "epics": epics_response,
+        "milestones": milestones_response,
+        "team": team_response
     }

@@ -8,6 +8,7 @@ import Allocation from "./pages/Allocation";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CreateProject from "./pages/CreateProject";
+import Projects from "./pages/Projects";
 
 // Simple protected route wrapper
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         
         {/* Protected Routes */}
+        <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
         <Route path="/create-project" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/milestones" element={<ProtectedRoute><Milestones /></ProtectedRoute>} />
