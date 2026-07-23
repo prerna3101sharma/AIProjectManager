@@ -24,7 +24,9 @@ export default function Home() {
           });
           if (res.data && res.data.email) {
             setUsername(res.data.email.split("@")[0]);
-            navigate("/projects");
+            if (!location.state?.projectName) {
+              navigate("/projects");
+            }
           }
         } catch (err) {
           console.error("Failed to fetch user", err);
